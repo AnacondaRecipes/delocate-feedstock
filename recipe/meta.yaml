@@ -18,13 +18,14 @@ build:
 
 requirements:
   host:
-    - pip
     - python
-    - setuptools
+    - pip
+    - setuptools >=61.0.0
+    - setuptools-scm >=6.2
   run:
     - python
-    - packaging
-    - typing-extensions
+    - packaging >=20.9
+    - typing-extensions >=4.12.2
     - macholib
 
 # These tests are failing due to compatibility issues (test scripting, x86-64 is not supported, etc.)
@@ -78,6 +79,7 @@ test:
     - delocate-addplat -h       # [osx]
     - delocate-listdeps -h      # [osx]
     - delocate-merge -h         # [osx]
+    - delocate-patch -h         # [osx]
     - delocate-path -h          # [osx]
     - delocate-wheel -h         # [osx]
     # Run upstream vendor tests
