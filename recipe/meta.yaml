@@ -12,6 +12,9 @@ source:
 build:
   number: 0
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
+  missing_dso_whitelist:
+    # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib on macOS
+    - '*/libgcc_s*'  # [osx]
 
 requirements:
   host:
@@ -24,15 +27,61 @@ requirements:
     - typing-extensions
     - macholib
 
+# These tests are failing due to compatibility issues (test scripting, x86-64 is not supported, etc.)
+{% set deselected_tests = [
+  "test_delocating.py::test_delocate_tree_libs[tree_libs]",
+  "test_delocating.py::test_delocate_tree_libs[tree_libs_from_directory]",
+  "test_delocating.py::test_copy_recurse",
+  "test_delocating.py::test_delocate_path",
+  "test_delocating.py::test_delocate_path_dylibs",
+  "test_delocating.py::test_dyld_library_path_lookups",
+  "test_delocating.py::test_dyld_library_path_beats_basename",
+  "test_delocating.py::test_dyld_fallback_library_path_loses_to_basename",
+  "test_install_names.py::test_get_install_names",
+  "test_install_names.py::test_install_id",
+  "test_install_names.py::test_install_ids",
+  "test_install_names.py::test_change_install_name",
+  "test_install_names.py::test_get_rpaths",
+  "test_install_names.py::test_add_rpath",
+  "test_libsana.py::test_tree_libs",
+  "test_libsana.py::test_tree_libs_from_directory",
+  "test_libsana.py::test_tree_libs_from_directory_with_links",
+  "test_libsana.py::test_stripped_lib_dict",
+  "test_scripts.py::test_path[inprocess]",
+  "test_scripts.py::test_path_dylibs[inprocess]",
+  "test_scripts.py::test_wheel[inprocess]",
+  "test_scripts.py::test_fix_wheel_dylibs[inprocess]",
+  "test_scripts.py::test_fix_wheel_archs[inprocess]",
+  "test_scripts.py::test_fix_wheel_with_excluded_dylibs[inprocess]",
+  "test_scripts.py::test_sanitize_command[inprocess-True]",
+  "test_scripts.py::test_sanitize_command[inprocess-False]",
+  "test_scripts.py::test_glob[inprocess]",
+  "test_scripts.py::test_delocate_wheel_macos_release_version_warning[inprocess]",
+  "test_tools.py::test_validate_signature",
+  "test_tools.py::test_archive_member",
+] %}
+
 test:
+  # delocate is a tool for macOS only
+  script_env:                   # [osx]
+    - MACOSX_DEPLOYMENT_TARGET  # [osx]
   requires:
     - pip
+    - pytest                    # [osx]
+    - pytest-console-scripts    # [osx]
   imports:
     - delocate
   commands:
     - pip check
-    - delocate-listdeps -h
-    - delocate-wheel -h
+    # Test all executables on macOS only
+    # Note: delocate-fuse is not available
+    - delocate-addplat -h       # [osx]
+    - delocate-listdeps -h      # [osx]
+    - delocate-merge -h         # [osx]
+    - delocate-path -h          # [osx]
+    - delocate-wheel -h         # [osx]
+    # Run upstream vendor tests
+    - cd $SP_DIR/delocate/tests && pytest {% for t in deselected_tests %}--deselect="{{ t }}" {% endfor %}  # [osx]
 
 about:
   home: https://github.com/matthew-brett/delocate
