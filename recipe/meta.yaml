@@ -1,27 +1,33 @@
+{% set name = "delocate" %}
 {% set version = "0.13.0" %}
 
 package:
-  name: delocate
+  name: {{ name }}
   version: {{ version }}
 
 source:
-  fn: delocate-{{ version }}.tar.gz
-  url: https://pypi.io/packages/source/d/delocate/delocate-{{ version }}.tar.gz
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
   sha256: a93e67a9f56ee01a3f7096a042231d4ac37fecac873cd5ea34ea2b4f43a8fa13
 
 build:
+  # delocate is designed to work only on macOS
+  skip: true  # [not osx]
+  skip: true  # [py<39]
   number: 0
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
   missing_dso_whitelist:
-    # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib on macOS
+    # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib
     - '*/libgcc_s*'  # [osx]
 
 requirements:
   host:
     - python
     - pip
+    # skip wheel if setuptools >=70.0.1
+    - wheel
     - setuptools >=61.0.0
     - setuptools-scm >=6.2
+    - toml
   run:
     - python
     - packaging >=20.9
@@ -63,27 +69,26 @@ requirements:
 ] %}
 
 test:
-  # delocate is a tool for macOS only
-  script_env:                   # [osx]
-    - MACOSX_DEPLOYMENT_TARGET  # [osx]
+  script_env:
+    - MACOSX_DEPLOYMENT_TARGET
   requires:
     - pip
-    - pytest                    # [osx]
-    - pytest-console-scripts    # [osx]
+    - pytest >=6.0
+    - pytest-console-scripts >=1.4.0
   imports:
     - delocate
   commands:
     - pip check
-    # Test all executables on macOS only
-    # Note: delocate-fuse is not available
-    - delocate-addplat -h       # [osx]
-    - delocate-listdeps -h      # [osx]
-    - delocate-merge -h         # [osx]
-    - delocate-patch -h         # [osx]
-    - delocate-path -h          # [osx]
-    - delocate-wheel -h         # [osx]
+    # delocate-fuse is not available
+    # Ref: https://github.com/matthew-brett/delocate/blob/0.13.0/delocate/cmd/delocate_fuse.py#L14-L22
+    - delocate-addplat -h
+    - delocate-listdeps -h
+    - delocate-merge -h
+    - delocate-patch -h
+    - delocate-path -h
+    - delocate-wheel -h
     # Run upstream vendor tests
-    - cd $SP_DIR/delocate/tests && pytest {% for t in deselected_tests %}--deselect="{{ t }}" {% endfor %}  # [osx]
+    - cd $SP_DIR/delocate/tests && pytest {% for t in deselected_tests %}--deselect="{{ t }}" {% endfor %}
 
 about:
   home: https://github.com/matthew-brett/delocate
