@@ -1,35 +1,94 @@
-{% set version = "0.10.4" %}
+{% set name = "delocate" %}
+{% set version = "0.13.0" %}
 
 package:
-  name: delocate
+  name: {{ name }}
   version: {{ version }}
 
 source:
-  fn: delocate-{{ version }}.tar.gz
-  url: https://pypi.io/packages/source/d/delocate/delocate-{{ version }}.tar.gz
-  sha256: eae712f46f23481ac82250b9dc357280b8cd17ac0e57dce08654d5f722793c93
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: a93e67a9f56ee01a3f7096a042231d4ac37fecac873cd5ea34ea2b4f43a8fa13
 
 build:
+  # delocate is designed to work only on macOS
+  skip: true  # [not osx]
+  skip: true  # [py<39]
   number: 0
-  noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vv
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
+  missing_dso_whitelist:
+    # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib
+    - '*/libgcc_s*'  # [osx]
 
 requirements:
   host:
+    - python
     - pip
-    - python >=3.6
-  run:
-    - python >=3.6
+    # skip wheel if setuptools >=70.0.1
     - wheel
-    - six
-    - packaging
+    - setuptools >=61.0.0
+    - setuptools-scm >=6.2
+    - toml
+  run:
+    - python
+    - packaging >=20.9
+    - typing-extensions >=4.12.2
+    - macholib
+
+# These tests are failing due to compatibility issues (test scripting, x86-64 is not supported, etc.)
+{% set deselected_tests = [
+  "test_delocating.py::test_delocate_tree_libs[tree_libs]",
+  "test_delocating.py::test_delocate_tree_libs[tree_libs_from_directory]",
+  "test_delocating.py::test_copy_recurse",
+  "test_delocating.py::test_delocate_path",
+  "test_delocating.py::test_delocate_path_dylibs",
+  "test_delocating.py::test_dyld_library_path_lookups",
+  "test_delocating.py::test_dyld_library_path_beats_basename",
+  "test_delocating.py::test_dyld_fallback_library_path_loses_to_basename",
+  "test_install_names.py::test_get_install_names",
+  "test_install_names.py::test_install_id",
+  "test_install_names.py::test_install_ids",
+  "test_install_names.py::test_change_install_name",
+  "test_install_names.py::test_get_rpaths",
+  "test_install_names.py::test_add_rpath",
+  "test_libsana.py::test_tree_libs",
+  "test_libsana.py::test_tree_libs_from_directory",
+  "test_libsana.py::test_tree_libs_from_directory_with_links",
+  "test_libsana.py::test_stripped_lib_dict",
+  "test_scripts.py::test_path[inprocess]",
+  "test_scripts.py::test_path_dylibs[inprocess]",
+  "test_scripts.py::test_wheel[inprocess]",
+  "test_scripts.py::test_fix_wheel_dylibs[inprocess]",
+  "test_scripts.py::test_fix_wheel_archs[inprocess]",
+  "test_scripts.py::test_fix_wheel_with_excluded_dylibs[inprocess]",
+  "test_scripts.py::test_sanitize_command[inprocess-True]",
+  "test_scripts.py::test_sanitize_command[inprocess-False]",
+  "test_scripts.py::test_glob[inprocess]",
+  "test_scripts.py::test_delocate_wheel_macos_release_version_warning[inprocess]",
+  "test_tools.py::test_validate_signature",
+  "test_tools.py::test_archive_member",
+] %}
 
 test:
+  script_env:
+    - MACOSX_DEPLOYMENT_TARGET
+  requires:
+    - pip
+    - pytest >=6.0
+    - pytest-console-scripts >=1.4.0
   imports:
     - delocate
   commands:
+    - pip check
+    # delocate-fuse is not available
+    # Ref: https://github.com/matthew-brett/delocate/blob/0.13.0/delocate/cmd/delocate_fuse.py#L14-L22
+    - delocate-addplat -h
     - delocate-listdeps -h
+    - delocate-merge -h
+    - delocate-patch -h
+    - delocate-path -h
     - delocate-wheel -h
+    # Run upstream vendor tests
+    - cd $SP_DIR/delocate/tests && pytest {% for t in deselected_tests %}--deselect="{{ t }}" {% endfor %}
 
 about:
   home: https://github.com/matthew-brett/delocate
@@ -37,6 +96,13 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary: Move OSX dynamic libraries into package
+  description: |
+    Delocate provides macOS utilities to find dynamic libraries imported
+    from python extensions, copy needed dynamic libraries to directory
+    within package, and update macOS install_names and rpath to cause code
+    to load from copies of libraries
+  doc_url: https://github.com/matthew-brett/delocate
+  dev_url: https://github.com/matthew-brett/delocate
 
 extra:
   recipe-maintainers:
