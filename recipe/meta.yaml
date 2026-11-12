@@ -13,7 +13,7 @@ build:
   # delocate is designed to work only on macOS
   skip: true  # [not osx]
   skip: true  # [py<39]
-  number: 0
+  number: 1
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
   missing_dso_whitelist:
     # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib
