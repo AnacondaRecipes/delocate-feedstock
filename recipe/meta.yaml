@@ -69,6 +69,12 @@ requirements:
   "test_scripts.py::test_delocate_wheel_macos_release_version_warning[inprocess]",
   "test_tools.py::test_validate_signature",
   "test_tools.py::test_archive_member",
+  # Upstream fixture @rpath dependency does not resolve on osx-arm64.
+  "test_libsana.py::test_get_dependencies",  # [osx and arm64]
+  "test_libsana.py::test_walk_library",  # [osx and arm64]
+  "test_libsana.py::test_walk_directory",  # [osx and arm64]
+  "test_scripts.py::test_listdeps[inprocess]",  # [osx and arm64]
+  "test_wheelies.py::test_fix_rpath",  # [osx and arm64]
 ] %}
 
 test:
@@ -78,6 +84,7 @@ test:
     - pip
     - pytest >=6.0
     - pytest-console-scripts >=1.4.0
+    - wheel
   imports:
     - delocate
   commands:
