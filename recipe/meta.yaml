@@ -18,6 +18,9 @@ build:
   missing_dso_whitelist:
     # {{ SP_DIR }}/delocate/tests/.dylibs/libgcc_s.1.dylib
     - '*/libgcc_s*'  # [osx]
+    # upstream test fixture with an intentionally unresolvable $RPATH
+    # {{ SP_DIR }}/delocate/tests/data/libextfunc_rpath.dylib
+    - '*/libextfunc2_rpath.dylib'  # [osx]
 
 requirements:
   host:
